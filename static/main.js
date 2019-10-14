@@ -1,3 +1,5 @@
+'use strict';
+
 class Person {
     constructor(username, firstName, lastName, password) {
         this.username = username;
@@ -7,87 +9,147 @@ class Person {
 
     addUser() {
         console.log(`Creating ${this.username}`);
-        return ApiConnector.createUser({
+        let user = {
             username: this.username,
             name: {firstName: this.name.firstName, lastName: this.name.lastName},
             password: this.password,
-        }, (err, data) => {
-            //console.log(`Creating ${this.username}`);
-            if (err) {
-                console.log(`Failed to create ${this.username}. It seems that user already exists.`);
-            } else {
-                console.log(`Created ${this.username} ` + data);
-                //this.authUser();
-            }
-        });
-    }
+        };
+        let promise = new Promise((resolve, reject) => {
+            ApiConnector.createUser( user, (err, data) => {
+                //console.log(`Creating ${this.username}`);
+                if (err) {
+                    reject(`Failed to create ${this.username}. It seems that user already exists.`);;
+                } else {
+                    console.log(`Created ${this.username} `);
+                    resolve(data);
+                }
+            })
+        })
+        return promise;
+        }
 
     authUser() {
         console.log(`Authorizing ${this.username}`);
-        return ApiConnector.performLogin({
-            username: this.username,
-            password: this.password,
-        }, (err, data) => {
-            if (err) {
-                console.log(`Failed to authorize ${this.username}`);
-            } else {
-                console.log(`${this.username} is authorized. ` + data);
-            }
-        });
+        let promise = new Promise((resolve, reject) => {
+            ApiConnector.performLogin({
+                username: this.username,
+                password: this.password,
+            }, (err, data) => {
+                if (err) {
+                    reject(`Failed to authorize ${this.username}`);
+                } else {
+                    console.log(`${this.username} is authorized. `);
+                    resolve(data);
+                }
+            })
+        })
+        return promise;
     }
 
 
     addMoney({currency, amount}) {
-        return ApiConnector.addMoney({currency, amount}, (err, data) => {
-            console.log(`Adding ${amount} of ${currency} to ${this.username}`);
-            if (err) {
-                console.log(`Failed adding money to ${this.username}`);
-            } else {
-                console.log(`Added ${amount} of ${currency} to ${this.username}. ${data}`);
-            }
-        });
-    }
-
-    convertMoney({fromCurrency, targetCurrency, targetAmount}) {
-        return ApiConnector.convertMoney({fromCurrency, targetCurrency, targetAmount}, (err, data) => {
-            console.log(`Converting ${fromCurrency} to ${targetAmount} ${targetCurrency}`);
-            if (err) {
-                console.log(`Failed to convert`);
-            } else {
-                console.log(`Converted to coins: ${data}`);
-                for (let item in data.wallet) {
-                    console.log(item + ': ' + data.wallet[item]);
+        console.log(`Adding ${amount} of ${currency} to ${this.username}`);
+        let promise = new Promise((resolve, reject) => {
+            ApiConnector.addMoney({currency, amount}, (err, data) => {
+                if (err) {
+                    reject(`Failed adding money to ${this.username}`);
+                } else {
+                    console.log(`Added ${amount} of ${currency} to ${this.username}. ${data}`);
+                    resolve(data);
                 }
-            }
-        });
+            });
+        })
+        return promise;
     }
 
-    transferMoney({to, amount}) {
-        return ApiConnector.transferMoney({to, amount}, (err, data) => {
-            console.log(`Transfering ${amount} of Netcoins to ${to}`);
-            if (err) {
-                console.log('Failed to transfer');
-            } else {
-                console.log('Successful transfer. ' + data);
-            }
-        });
+    convertMoney({fromCurrency, targetCurrency, fromAmount, curr}) {
+        //let stocks = curr();
+        console.log(curr);
+        let targetAmount = curr[targetCurrency + '_' + fromCurrency] * fromAmount;
+        console.log(stocks[targetCurrency + '_' + fromCurrency]);
+        console.log(`Converting ${fromCurrency} to ${targetAmount} ${targetCurrency}`);
+        let promise = new Promise((resolve, reject) => {
+            ApiConnector.convertMoney({fromCurrency, targetCurrency, targetAmount}, (err, data) => {
+                if (err) {
+                    reject(`Failed to convert`);
+                } else {
+                    console.log(`Successfully converted to coins.`);
+                    console.log(`${this.username} current wallet is:`)
+                    for (let item in data.wallet) {
+                        console.log(item + ': ' + data.wallet[item]);
+                    }
+                    resolve(data);
+                }
+            });
+        })
+        return promise;
     }
 
+    transfer({to, amount}) {
+        console.log(`Transfering ${amount} of Netcoins to ${to}`);
+        let promise = new Promise((resolve, reject) => {
+            ApiConnector.transferMoney({to, amount}, (err, data) => {
+                if (err) {
+                    reject('Failed to transfer');
+                } else {
+                    for (let coin in data.wallet) {
+                        if (data.wallet.coin < 0) {
+                            reject(`It seems that you have no enough ${coin} to transfer`);
+                        }
+                    }
+                    console.log(`Successfull transfer of ${amount} NETCOINS to ${to}.`)
+                    resolve(data);
+                }
+            });
+        })
+        return promise;
+    }
 }
 
-const currency = () => {
-    return ApiConnector.getStocks((err, data) => {
+const currency = (callback) => {
         console.log("Getting stocks info");
-        if (err) {
-            console.log(`Failed to get currencies`);
-        } else {
-            console.log('Currencies: ', data);
-        }
-    });
-};
+        //let indexForCurrencyObject = Math.random().toFixed(2) * 100 - 1;
+        return ApiConnector.getStocks((err, data) => {
+            if (err) {
+                return `Failed to get currencies`;
+            } else {
+                console.log('Currencies loaded,');
+                callback(error, data);
+            }
+        });
+    };
+
+//currency();
+
+function main() {
+    const vlad = new Person('zhukovvlad', 'Vladimir', 'Zhukov', 'qwerty');
+    const petya = new Person('petro', 'Pyotr', 'Savvenkov', 'qwerty');
+
+ //let curr = currency();
+
+currency((error, data) => {
+    if (error) {
+        console.log('Failed to load currencies');
+    } else {
+        let curr = data[Math.random().toFixed(2) * 100 - 1];
+        return curr;
+    }
+     })
+
+      vlad.addUser()
+                .then(vlad.authUser.bind(vlad))
+                .then(petya.addUser.bind(petya))
+                .then(function() {
+                    return vlad.addMoney({currency: 'EUR', amount: 50000})
+                })
+                .then(function() {
+                    return vlad.convertMoney({fromCurrency: 'EUR', targetCurrency: 'NETCOIN', fromAmount: 10000, curr: curr})
+                })
+                .then(function() {
+                    return vlad.transfer({to: petya.username, amount: 3});
+                })
+                .catch(error => console.error(error));
+}
 
 
-const vlad = new Person('zhukovvlad', 'Vladimir', 'Zhukov', 'qwerty');
-const petya = new Person('petro', 'Pyotr', 'Savvenkov', 'qwerty');
-
-currency();
+main();
