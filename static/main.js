@@ -102,20 +102,19 @@ class Person {
     }
 }
 
-    function currency () {
-        console.log("Getting stocks info");
-        let stocks = new Promise((resolve, reject) => {
-            ApiConnector.getStocks((err, data) => {
-                if (err) {
-                    reject(`Failed to get currencies`);
-                } else {
-                    resolve(data);
-                }
-            });
-        });
-        return stocks;
-
-    };
+function currency () {
+    console.log("Getting stocks info");
+    let stocks = new Promise((resolve, reject) => {
+        ApiConnector.getStocks((err, data) => {
+            if (err) {
+                reject(`Failed to get currencies`);
+            } else {
+                resolve(data);
+            }
+        })
+    });
+    return stocks;
+}
 
 
 function main() {
@@ -126,7 +125,7 @@ function main() {
         .then(vlad.authUser.bind(vlad))
         .then(petya.addUser.bind(petya))
         .then(function() {
-            return vlad.addMoney({currency: 'EUR', amount: 50000})
+            return vlad.addMoney({currency: 'EUR', amount: 50000});
             })
         .then(currency)
         .then(function(data) {
