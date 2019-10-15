@@ -16,7 +16,6 @@ class Person {
         };
         let promise = new Promise((resolve, reject) => {
             ApiConnector.createUser( user, (err, data) => {
-                //console.log(`Creating ${this.username}`);
                 if (err) {
                     reject(`Failed to create ${this.username}. It seems that user already exists.`);;
                 } else {
@@ -54,7 +53,7 @@ class Person {
                 if (err) {
                     reject(`Failed adding money to ${this.username}`);
                 } else {
-                    console.log(`Added ${amount} of ${currency} to ${this.username}. ${data}`);
+                    console.log(`Added ${amount} of ${currency} to ${this.username}.`);
                     resolve(data);
                 }
             });
@@ -62,19 +61,19 @@ class Person {
         return promise;
     }
 
-    convertMoney({fromCurrency, targetCurrency, fromAmount, curr}) {
-        //let stocks = curr();
+    convertMoney({fromCurrency, targetCurrency, fromAmount}, curr) {
         console.log(curr);
-        let targetAmount = curr[targetCurrency + '_' + fromCurrency] * fromAmount;
-        console.log(stocks[targetCurrency + '_' + fromCurrency]);
-        console.log(`Converting ${fromCurrency} to ${targetAmount} ${targetCurrency}`);
+        let targetAmount = curr[fromCurrency + '_' + targetCurrency] * fromAmount;
+        console.log(curr[fromCurrency + '_' + targetCurrency]);
+        console.log(targetAmount);
+        console.log(`Converting ${fromAmount} ${fromCurrency} to ${targetAmount} ${targetCurrency}`);
         let promise = new Promise((resolve, reject) => {
             ApiConnector.convertMoney({fromCurrency, targetCurrency, targetAmount}, (err, data) => {
                 if (err) {
                     reject(`Failed to convert`);
                 } else {
                     console.log(`Successfully converted to coins.`);
-                    console.log(`${this.username} current wallet is:`)
+                    console.log(`${this.username}'s current wallet is:`)
                     for (let item in data.wallet) {
                         console.log(item + ': ' + data.wallet[item]);
                     }
@@ -106,17 +105,25 @@ class Person {
     }
 }
 
-const currency = (callback) => {
+    function currency () {
         console.log("Getting stocks info");
         //let indexForCurrencyObject = Math.random().toFixed(2) * 100 - 1;
-        return ApiConnector.getStocks((err, data) => {
-            if (err) {
-                return `Failed to get currencies`;
-            } else {
-                console.log('Currencies loaded,');
-                callback(error, data);
-            }
+        let stocks = new Promise((resolve, reject) => {
+            ApiConnector.getStocks((err, data) => {
+                if (err) {
+                    reject(`Failed to get currencies`);
+                } else {
+                    /*
+                    let row = data[Math.random().toFixed(2) * 100 - 1];
+                    console.log('Currencies loaded, ' + data[Math.random().toFixed(2) * 100 - 1]);
+                    console.log(row);
+                    */
+                    resolve(data);
+                }
+            });
         });
+        return stocks;
+
     };
 
 //currency();
@@ -125,30 +132,26 @@ function main() {
     const vlad = new Person('zhukovvlad', 'Vladimir', 'Zhukov', 'qwerty');
     const petya = new Person('petro', 'Pyotr', 'Savvenkov', 'qwerty');
 
- //let curr = currency();
+    //let stocks = currency();
+    //console.log(stocks);
 
-currency((error, data) => {
-    if (error) {
-        console.log('Failed to load currencies');
-    } else {
-        let curr = data[Math.random().toFixed(2) * 100 - 1];
-        return curr;
-    }
-     })
 
-      vlad.addUser()
-                .then(vlad.authUser.bind(vlad))
-                .then(petya.addUser.bind(petya))
-                .then(function() {
-                    return vlad.addMoney({currency: 'EUR', amount: 50000})
-                })
-                .then(function() {
-                    return vlad.convertMoney({fromCurrency: 'EUR', targetCurrency: 'NETCOIN', fromAmount: 10000, curr: curr})
-                })
-                .then(function() {
-                    return vlad.transfer({to: petya.username, amount: 3});
-                })
-                .catch(error => console.error(error));
+
+    vlad.addUser()
+        .then(vlad.authUser.bind(vlad))
+        .then(petya.addUser.bind(petya))
+        .then(function() {
+            return vlad.addMoney({currency: 'EUR', amount: 50000})
+            })
+        .then(currency)
+        .then(function(data) {
+            console.log(data);
+            return vlad.convertMoney({fromCurrency: 'EUR', targetCurrency: 'NETCOIN', fromAmount: 10000}, data[data.length-1]);
+            })
+        .then(function() {
+            return vlad.transfer({to: petya.username, amount: 3});
+            })
+        .catch(error => console.error(error));
 }
 
 
